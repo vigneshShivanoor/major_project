@@ -1,0 +1,18 @@
+gmail account for cloudinary :backupvicky63@gmail.com
+
+Cloud name	
+dpsfbly23
+API key	
+716287136814786
+API secret	
+kmKi_UYK_s0nGlk0AE15lSxovbY
+
+
+CLOUDINARY_URL=cloudinary://716287136814786:kmKi_UYK_s0nGlk0AE15lSxovbY@dpsfbly23
+
+
+gmail account for mongodbatlas:vigneshshivanoor@gmail.com
+project name:project0
+clustername:Cluster0
+username:Naveen
+password:naveen
