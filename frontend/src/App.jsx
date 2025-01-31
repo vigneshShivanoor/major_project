@@ -1,5 +1,8 @@
+import { useState, useEffect } from "react";
+import { Routes, Route, Navigate } from "react-router-dom";
+import { useAuthStore } from "./store/useAuthStore";
+import { useThemeStore } from "./store/useThemeStore";
 import Navbar from "./components/Navbar";
-
 import HomePage from "./pages/HomePage";
 import SignUpPage from "./pages/SignUpPage";
 import LoginPage from "./pages/LoginPage";
@@ -8,28 +11,28 @@ import ProfilePage from "./pages/ProfilePage";
 import Calendar from "./pages/Calendar";
 import Events from "./pages/Events";
 import LeaveApplicationForm from "./pages/LeaveApplicationform";
-import { Routes, Route, Navigate } from "react-router-dom";
-import { useAuthStore } from "./store/useAuthStore";
-import { useThemeStore } from "./store/useThemeStore";
-import { useEffect } from "react";
-
-import { Loader } from "lucide-react";
-import { Toaster } from "react-hot-toast";
 import LeaveApprovals from "./pages/LeaveApprovals";
 import LeaveHistory from "./pages/LeaveHistory";
 import LeaveSettings from "./pages/LeaveSettings";
+import { Loader } from "lucide-react";
+import { Toaster } from "react-hot-toast";
 
 const App = () => {
   const { authUser, checkAuth, isCheckingAuth, onlineUsers } = useAuthStore();
   const { theme } = useThemeStore();
+  const [userId, setUserId] = useState(null);
 
   console.log({ onlineUsers });
-
   useEffect(() => {
     checkAuth();
   }, [checkAuth]);
 
-  console.log({ authUser });
+  useEffect(() => {
+    const storedUserId = localStorage.getItem("userId");
+    if (storedUserId) setUserId(storedUserId);
+  }, []);
+
+  console.log({ authUser, userId });
 
   if (isCheckingAuth && !authUser)
     return (
@@ -71,10 +74,13 @@ const App = () => {
         <Route
           path="/leaveapplication"
           element={
-            authUser ? <LeaveApplicationForm /> : <Navigate to="/login" />
+            authUser ? (
+              <LeaveApplicationForm userId={userId} />
+            ) : (
+              <Navigate to="/login" />
+            )
           }
         />
-
         <Route
           path="/history"
           element={authUser ? <LeaveHistory /> : <Navigate to="/login" />}
@@ -93,4 +99,5 @@ const App = () => {
     </div>
   );
 };
+
 export default App;
