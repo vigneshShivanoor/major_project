@@ -20,6 +20,22 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+    role: {
+      type: String,
+      required: true, // Role is now required
+      enum: [
+        "HOD-CSE",
+        "HOD-CSE-AIML",
+        "HOD-ECE",
+        "HOD-IT",
+        "HOD-EEE",
+        "HOD-CIVIL",
+        "HOD-MECH",
+        "HOD-FRESHERMAN",
+        "Faculty",
+        "Principal",
+      ],
+    },
   },
   { timestamps: true }
 );

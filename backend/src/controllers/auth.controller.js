@@ -4,11 +4,28 @@ import bcrypt from "bcryptjs";
 import cloudinary from "../lib/cloudinary.js";
 
 export const signup = async (req, res) => {
-  const { fullName, email, password } = req.body;
+  const { fullName, email, password, role } = req.body;
   // print(req.body);
   try {
-    if (!fullName || !email || !password) {
+    if (!fullName || !email || !password || !role) {
       return res.status(400).json({ message: "All fields are required" });
+    }
+
+    if (
+      ![
+        "HOD-CSE",
+        "HOD-CSE-AIML",
+        "HOD-ECE",
+        "HOD-IT",
+        "HOD-EEE",
+        "HOD-CIVIL",
+        "HOD-MECH",
+        "HOD-FRESHERMAN",
+        "Faculty",
+        "Principal",
+      ].includes(role)
+    ) {
+      return res.status(400).json({ message: "Invalid role selected" });
     }
 
     if (password.length < 6) {
@@ -28,6 +45,7 @@ export const signup = async (req, res) => {
       fullName,
       email,
       password: hashedPassword,
+      role,
     });
 
     if (newUser) {
@@ -40,6 +58,7 @@ export const signup = async (req, res) => {
         fullName: newUser.fullName,
         email: newUser.email,
         profilePic: newUser.profilePic,
+        role: newUser.role,
       });
     } else {
       res.status(400).json({ message: "Invalid user data" });
