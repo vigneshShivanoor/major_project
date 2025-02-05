@@ -12,7 +12,8 @@ export default function LeaveApplicationForm() {
     reason: "",
     document: null,
     documentName: "",
-    approver: "",
+    primaryApproverRole: "", // Now sending role instead of user ID
+    adminApprover: "6795dd028da3d527929978f1", // Fixed Admin Approver
   });
 
   useEffect(() => {
@@ -20,6 +21,18 @@ export default function LeaveApplicationForm() {
       setUserId(authUser._id);
     }
   }, [authUser]);
+
+  const roles = [
+    "HOD-CSE",
+    "HOD-CSE-AIML",
+    "HOD-ECE",
+    "HOD-IT",
+    "HOD-EEE",
+    "HOD-CIVIL",
+    "HOD-MECH",
+    "HOD-FRESHERMAN",
+    "Principal",
+  ];
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -47,19 +60,16 @@ export default function LeaveApplicationForm() {
     data.append("endDate", formData.endDate);
     data.append("leaveType", formData.leaveType);
     data.append("reason", formData.reason);
-    data.append("approver", formData.approver);
+    data.append("approverRole", formData.primaryApproverRole); // Sending role instead of user
+    data.append("adminApprover", formData.adminApprover);
     if (formData.document) {
       data.append("document", formData.document);
     }
 
     try {
-      const res = await axios.post(
-        "http://localhost:5000/api/leaves/apply",
-        data,
-        {
-          headers: { "Content-Type": "multipart/form-data" },
-        }
-      );
+      await axios.post("http://localhost:5000/api/leaves/apply", data, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
       alert("Leave application submitted successfully!");
     } catch (error) {
       alert(
@@ -134,7 +144,6 @@ export default function LeaveApplicationForm() {
                 required
               ></textarea>
             </div>
-
             <div>
               <label className="block text-sm font-medium mb-1">
                 Supporting Document
@@ -157,22 +166,23 @@ export default function LeaveApplicationForm() {
                 </p>
               )}
             </div>
-
             <div>
               <label className="block text-sm font-medium mb-1">
-                Select Approver
+                Select Primary Approver Role
               </label>
               <select
-                name="approver"
-                value={formData.approver}
+                name="primaryApproverRole"
+                value={formData.primaryApproverRole}
                 onChange={handleChange}
                 className="w-full px-4 py-2 rounded-lg border border-gray-600 bg-gray-700 text-white"
                 required
               >
-                <option value="">Select Approver</option>
-                <option value="HOD">HOD</option>
-                <option value="Dean">Dean</option>
-                <option value="Admin">Admin</option>
+                <option value="">Select Role</option>
+                {roles.map((role) => (
+                  <option key={role} value={role}>
+                    {role}
+                  </option>
+                ))}
               </select>
             </div>
 

@@ -1,4 +1,3 @@
-// leave.model.js
 import mongoose from "mongoose";
 
 const leaveSchema = new mongoose.Schema(
@@ -20,7 +19,13 @@ const leaveSchema = new mongoose.Schema(
     primaryApprover: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      default: "1232423r23823423", // Default primary approver ID
+      required: true,
+    },
+    adminApprover: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+      default: "6795dd028da3d527929978f1", // Fixed Admin Approver
     },
     status: {
       type: String,
@@ -28,7 +33,7 @@ const leaveSchema = new mongoose.Schema(
       enum: ["Pending", "Approved", "Rejected"],
     },
     primaryApprovalDate: { type: Date },
-    approvalDate: { type: Date },
+    finalApprovalDate: { type: Date },
   },
   { timestamps: true }
 );

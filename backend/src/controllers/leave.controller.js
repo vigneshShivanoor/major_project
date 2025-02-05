@@ -1,4 +1,5 @@
 import Leave from "../models/leave.model.js";
+import User from "../models/user.model.js";
 import cloudinary from "cloudinary";
 
 cloudinary.v2.config({
@@ -13,18 +14,19 @@ export const applyLeave = async (req, res) => {
     console.log("🔹 Request Body:", req.body);
     console.log("📂 Uploaded File:", req.file);
 
-    const { userId, startDate, endDate, leaveType, reason, approver } =
+    const { userId, startDate, endDate, leaveType, reason, approverRole } =
       req.body;
 
-    // Map approver role to corresponding ID
-    const approverMapping = {
-      HOD: "679cb8f8f166e4c978b60f5e",
-      Admin: "6795dd028da3d527929978f1",
-      Dean: "679cb9a0f166e4c978b60f6d",
-    };
+    // Fetch Primary Approver ID based on selected role
+    const primaryApproverUser = await User.findOne({ role: approverRole });
+    if (!primaryApproverUser) {
+      return res
+        .status(400)
+        .json({ message: "No user found for selected role." });
+    }
 
-    const primaryApprover =
-      approverMapping[approver] || approverMapping["Admin"]; // Default to Admin if not provided
+    const primaryApprover = primaryApproverUser._id;
+    const adminApprover = "6795dd028da3d527929978f1"; // Fixed Admin Approver
 
     let documentUrl = null;
     if (req.file) {
@@ -40,6 +42,7 @@ export const applyLeave = async (req, res) => {
       reason,
       documentUrl,
       primaryApprover,
+      adminApprover,
     });
 
     await leave.save();
@@ -53,7 +56,6 @@ export const applyLeave = async (req, res) => {
       .json({ message: "Internal server error", error: error.message });
   }
 };
-
 export const getUserLeaves = async (req, res) => {
   try {
     const { userId } = req.params;
@@ -68,5 +70,53 @@ export const getUserLeaves = async (req, res) => {
     res
       .status(500)
       .json({ message: "Internal server error", error: error.message });
+  }
+};
+
+// Fetch pending leaves for a specific primary approver
+export const getPendingApprovals = async (req, res) => {
+  try {
+    const { approverId } = req.params;
+    console.log("Fetching leaves for Primary Approver ID:", approverId);
+
+    const pendingLeaves = await Leave.find({
+      primaryApprover: approverId,
+      status: "pending",
+    });
+
+    console.log("Leaves found:", pendingLeaves);
+    res.json(pendingLeaves);
+  } catch (error) {
+    console.error("Error fetching pending approvals:", error);
+    res
+      .status(500)
+      .json({ message: "Error fetching pending approvals", error });
+  }
+};
+
+// Update leave status (Accept/Reject)
+export const updateLeaveStatus = async (req, res) => {
+  try {
+    const { leaveId } = req.params;
+    const { status } = req.body;
+
+    console.log(`Updating leave ${leaveId} to status: ${status}`);
+
+    const leave = await Leave.findByIdAndUpdate(
+      leaveId,
+      { status },
+      { new: true }
+    );
+
+    if (!leave) {
+      console.error("Leave request not found:", leaveId);
+      return res.status(404).json({ message: "Leave request not found" });
+    }
+
+    console.log("Leave updated successfully:", leave);
+    res.json({ message: "Leave status updated successfully", leave });
+  } catch (error) {
+    console.error("Error updating leave status:", error);
+    res.status(500).json({ message: "Error updating leave status", error });
   }
 };

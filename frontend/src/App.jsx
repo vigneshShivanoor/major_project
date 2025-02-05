@@ -91,7 +91,13 @@ const App = () => {
         />
         <Route
           path="/approvals"
-          element={authUser ? <LeaveApprovals /> : <Navigate to="/login" />}
+          element={
+            authUser ? (
+              <LeaveApprovals userId={userId} />
+            ) : (
+              <Navigate to="/login" />
+            )
+          }
         />
       </Routes>
 
