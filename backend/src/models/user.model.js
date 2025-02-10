@@ -34,6 +34,7 @@ const userSchema = new mongoose.Schema(
         "HOD-FRESHERMAN",
         "Faculty",
         "Principal",
+        "Admin",
       ],
     },
   },

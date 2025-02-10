@@ -14,8 +14,15 @@ export const applyLeave = async (req, res) => {
     console.log("🔹 Request Body:", req.body);
     console.log("📂 Uploaded File:", req.file);
 
-    const { userId, startDate, endDate, leaveType, reason, approverRole } =
-      req.body;
+    const {
+      userId,
+      fullName,
+      startDate,
+      endDate,
+      leaveType,
+      reason,
+      approverRole,
+    } = req.body;
 
     // Fetch Primary Approver ID based on selected role
     const primaryApproverUser = await User.findOne({ role: approverRole });
@@ -36,6 +43,7 @@ export const applyLeave = async (req, res) => {
 
     const leave = new Leave({
       userId,
+      fullName,
       startDate,
       endDate,
       leaveType,
@@ -81,7 +89,7 @@ export const getPendingApprovals = async (req, res) => {
 
     const pendingLeaves = await Leave.find({
       primaryApprover: approverId,
-      status: "pending",
+      status: "Pending",
     });
 
     console.log("Leaves found:", pendingLeaves);
@@ -118,5 +126,35 @@ export const updateLeaveStatus = async (req, res) => {
   } catch (error) {
     console.error("Error updating leave status:", error);
     res.status(500).json({ message: "Error updating leave status", error });
+  }
+};
+
+export const getAllLeaves = async (req, res) => {
+  try {
+    console.log("🔹 Fetching all leave applications...");
+
+    const leaves = await Leave.find()
+      .populate("userId", "fullName email") // Fetch user details
+      .populate("primaryApprover", "fullName email") // Fetch approver details
+      .sort({ startDate: -1 }); // Sort by start date (newest first)
+
+    if (!leaves || leaves.length === 0) {
+      console.log("⚠️ No leave applications found.");
+      return res.status(404).json({ message: "No leave applications found." });
+    }
+
+    // Add primaryApprover full name to each leave
+    const leavesWithApprover = leaves.map((leave) => ({
+      ...leave.toObject(),
+      primaryApproverName: leave.primaryApprover.fullName, // Add primary approver name
+    }));
+
+    console.log("✅ Fetched leave applications:", leavesWithApprover.length);
+    res.status(200).json(leavesWithApprover); // Send modified data
+  } catch (error) {
+    console.error("🚨 Error fetching leave applications:", error.message);
+    res
+      .status(500)
+      .json({ message: "Internal server error", error: error.message });
   }
 };

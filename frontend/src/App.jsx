@@ -16,12 +16,14 @@ import LeaveHistory from "./pages/LeaveHistory";
 import LeaveSettings from "./pages/LeaveSettings";
 import { Loader } from "lucide-react";
 import { Toaster } from "react-hot-toast";
+import Dashboard from "./pages/Dashboard";
+import LeaveTable from "./pages/LeaveTable";
 
 const App = () => {
   const { authUser, checkAuth, isCheckingAuth, onlineUsers } = useAuthStore();
   const { theme } = useThemeStore();
   const [userId, setUserId] = useState(null);
-
+  const [fullName, setFullName] = useState("");
   console.log({ onlineUsers });
   useEffect(() => {
     checkAuth();
@@ -67,6 +69,11 @@ const App = () => {
           path="/calendar"
           element={authUser ? <Calendar /> : <Navigate to="/login" />}
         />
+
+        <Route
+          path="/Dashboard"
+          element={authUser ? <Dashboard /> : <Navigate to="/login" />}
+        />
         <Route
           path="/events"
           element={authUser ? <Events /> : <Navigate to="/login" />}
@@ -75,7 +82,7 @@ const App = () => {
           path="/leaveapplication"
           element={
             authUser ? (
-              <LeaveApplicationForm userId={userId} />
+              <LeaveApplicationForm userId={userId} fullName={fullName} />
             ) : (
               <Navigate to="/login" />
             )
@@ -88,6 +95,10 @@ const App = () => {
         <Route
           path="/leavesettings"
           element={authUser ? <LeaveSettings /> : <Navigate to="/login" />}
+        />
+        <Route
+          path="/LeaveTable"
+          element={authUser ? <LeaveTable /> : <Navigate to="/login" />}
         />
         <Route
           path="/approvals"

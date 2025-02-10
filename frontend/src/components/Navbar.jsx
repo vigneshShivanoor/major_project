@@ -79,10 +79,10 @@ const Navbar = () => {
                     Leave History
                   </button>
                   <button
-                    onClick={() => navigate("/leavesettings")}
+                    onClick={() => navigate("/Dashboard")}
                     className="w-full p-3 text-left hover:bg-gray-700 rounded-b-lg text-sm"
                   >
-                    Settings
+                    Dashboard
                   </button>
                 </div>
               )}

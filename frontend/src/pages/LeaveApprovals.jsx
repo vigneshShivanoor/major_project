@@ -1,10 +1,14 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
+import { useAuthStore } from "../store/useAuthStore";
+import "./LeaveApprovals.css"; // Import the CSS file
 
-const LeaveApprovals = ({ authUser }) => {
+const LeaveApprovals = () => {
   const [pendingApprovals, setPendingApprovals] = useState([]);
+  const { authUser } = useAuthStore();
 
   useEffect(() => {
+    console.log("authUser:", authUser);
     if (authUser?._id) {
       console.log("Fetching leaves for primaryApprover:", authUser._id);
 
@@ -36,63 +40,64 @@ const LeaveApprovals = ({ authUser }) => {
       .catch((err) => console.error("Error updating status:", err));
   };
 
+  // Function to trim date to "YYYY-MM-DD" format
+  const formatDate = (dateString) => dateString.split("T")[0];
+
   return (
-    <div>
+    <div className="leave-approvals-container">
       <h2>Pending Leave Approvals</h2>
       {pendingApprovals.length === 0 ? (
         <p>No pending approvals</p>
       ) : (
-        <table border="1" cellPadding="5" style={{ width: "100%" }}>
-          <thead>
-            <tr>
-              <th>Employee</th>
-              <th>Leave Type</th>
-              <th>From</th>
-              <th>To</th>
-              <th>Status</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {pendingApprovals.map((leave) => (
-              <tr key={leave._id}>
-                <td>{leave.employeeName}</td>
-                <td>{leave.leaveType}</td>
-                <td>{leave.startDate}</td>
-                <td>{leave.endDate}</td>
-                <td>{leave.status}</td>
-                <td>
-                  {leave.status === "pending" ? (
-                    <>
-                      <button
-                        onClick={() =>
-                          handleStatusUpdate(leave._id, "accepted")
-                        }
-                        style={{
-                          marginRight: "10px",
-                          background: "green",
-                          color: "white",
-                        }}
-                      >
-                        Accept
-                      </button>
-                      <button
-                        onClick={() =>
-                          handleStatusUpdate(leave._id, "rejected")
-                        }
-                        style={{ background: "red", color: "white" }}
-                      >
-                        Reject
-                      </button>
-                    </>
-                  ) : (
-                    <span>{leave.status.toUpperCase()}</span>
-                  )}
-                </td>
+        <div className="table-responsive">
+          <table className="leave-approvals-table">
+            <thead>
+              <tr>
+                <th>Employee</th>
+                <th>Leave Type</th>
+                <th>From</th>
+                <th>To</th>
+                <th>Status</th>
+                <th>Actions</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {pendingApprovals.map((leave) => (
+                <tr key={leave._id}>
+                  <td>{leave.fullName}</td>
+                  <td>{leave.leaveType}</td>
+                  <td>{formatDate(leave.startDate)}</td>
+                  <td>{formatDate(leave.endDate)}</td>
+                  <td>{leave.status}</td>
+                  <td>
+                    {leave.status === "Pending" ? (
+                      <>
+                        <button
+                          onClick={() =>
+                            handleStatusUpdate(leave._id, "accepted")
+                          }
+                          className="btn-accept"
+                        >
+                          Accept
+                        </button>
+                        <button
+                          onClick={() =>
+                            handleStatusUpdate(leave._id, "rejected")
+                          }
+                          className="btn-reject"
+                        >
+                          Reject
+                        </button>
+                      </>
+                    ) : (
+                      <span>{leave.status.toUpperCase()}</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   );

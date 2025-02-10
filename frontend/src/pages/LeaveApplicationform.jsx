@@ -5,6 +5,7 @@ import { useAuthStore } from "../store/useAuthStore";
 export default function LeaveApplicationForm() {
   const { authUser } = useAuthStore();
   const [userId, setUserId] = useState(null);
+  const [fullName, setFullName] = useState("");
   const [formData, setFormData] = useState({
     leaveType: "",
     startDate: "",
@@ -19,6 +20,7 @@ export default function LeaveApplicationForm() {
   useEffect(() => {
     if (authUser) {
       setUserId(authUser._id);
+      setFullName(authUser.fullName);
     }
   }, [authUser]);
 
@@ -56,6 +58,7 @@ export default function LeaveApplicationForm() {
 
     const data = new FormData();
     data.append("userId", userId);
+    data.append("fullName", fullName);
     data.append("startDate", formData.startDate);
     data.append("endDate", formData.endDate);
     data.append("leaveType", formData.leaveType);

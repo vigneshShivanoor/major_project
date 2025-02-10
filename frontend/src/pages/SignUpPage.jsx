@@ -34,6 +34,7 @@ const SignUpPage = () => {
     "HOD-FRESHERMAN",
     "Faculty",
     "Principal",
+    "Admin",
   ];
 
   const { signup, isSigningUp } = useAuthStore();

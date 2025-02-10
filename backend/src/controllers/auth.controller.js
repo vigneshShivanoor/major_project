@@ -23,6 +23,7 @@ export const signup = async (req, res) => {
         "HOD-FRESHERMAN",
         "Faculty",
         "Principal",
+        "Admin",
       ].includes(role)
     ) {
       return res.status(400).json({ message: "Invalid role selected" });

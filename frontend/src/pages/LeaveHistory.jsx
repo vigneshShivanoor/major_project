@@ -38,9 +38,9 @@ export default function LeaveHistory() {
                 <li
                   key={leave._id}
                   className={`p-6 rounded-xl transition-all duration-300 ease-in-out transform ${
-                    leave.status === "Approved" ? "bg-green-700" : "bg-red-700"
+                    leave.status === "accepted" ? "bg-green-700" : "bg-red-700"
                   } border-2 ${
-                    leave.status === "Approved"
+                    leave.status === "accepted"
                       ? "border-green-500"
                       : "border-red-500"
                   } hover:scale-105`}
@@ -51,7 +51,7 @@ export default function LeaveHistory() {
                       <p className="text-md text-gray-300">{leave.leaveType}</p>
                     </div>
                     <div>
-                      {leave.status === "Approved" ? (
+                      {leave.status === "accepted" ? (
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
                           className="h-6 w-6 text-green-400"
