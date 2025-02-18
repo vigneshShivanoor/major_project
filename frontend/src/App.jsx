@@ -18,6 +18,10 @@ import { Loader } from "lucide-react";
 import { Toaster } from "react-hot-toast";
 import Dashboard from "./pages/Dashboard";
 import LeaveTable from "./pages/LeaveTable";
+import CompensatoryLeaveForm from "./pages/CompensatoryLeaveForm";
+import EarnedLeaveForm from "./pages/EarnedLeaveForm";
+import EarnedLeaveApprovals from "./pages/EarnedLeaveApproval";
+import AdminEarnedLeaveApprovals from "./pages/AdminEarnedLeaveApprovals";
 
 const App = () => {
   const { authUser, checkAuth, isCheckingAuth, onlineUsers } = useAuthStore();
@@ -74,10 +78,31 @@ const App = () => {
           path="/Dashboard"
           element={authUser ? <Dashboard /> : <Navigate to="/login" />}
         />
+
+        <Route
+          path="/earnedleaveapproval"
+          element={
+            authUser ? <EarnedLeaveApprovals /> : <Navigate to="/login" />
+          }
+        />
+
+        <Route
+          path="/earnedleaveapprovaladmin"
+          element={
+            authUser ? <AdminEarnedLeaveApprovals /> : <Navigate to="/login" />
+          }
+        />
+
         <Route
           path="/events"
           element={authUser ? <Events /> : <Navigate to="/login" />}
         />
+
+        <Route
+          path="/earnedleave"
+          element={authUser ? <EarnedLeaveForm /> : <Navigate to="/login" />}
+        />
+
         <Route
           path="/leaveapplication"
           element={
@@ -92,6 +117,14 @@ const App = () => {
           path="/history"
           element={authUser ? <LeaveHistory /> : <Navigate to="/login" />}
         />
+
+        <Route
+          path="/apply-ccl"
+          element={
+            authUser ? <CompensatoryLeaveForm /> : <Navigate to="/login" />
+          }
+        />
+
         <Route
           path="/leavesettings"
           element={authUser ? <LeaveSettings /> : <Navigate to="/login" />}

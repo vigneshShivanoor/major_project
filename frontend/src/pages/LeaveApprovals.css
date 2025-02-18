@@ -31,10 +31,6 @@ h2 {
   font-size: 14px;
 }
 
-.leave-approvals-table tbody tr:nth-child(even) {
-  background-color: #f9f9f9;
-}
-
 .btn-accept,
 .btn-reject {
   padding: 8px 15px;

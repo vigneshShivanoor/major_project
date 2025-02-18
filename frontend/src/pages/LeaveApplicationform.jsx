@@ -6,15 +6,16 @@ export default function LeaveApplicationForm() {
   const { authUser } = useAuthStore();
   const [userId, setUserId] = useState(null);
   const [fullName, setFullName] = useState("");
+  const [message, setMessage] = useState(null);
+  const [messageType, setMessageType] = useState("");
+
   const [formData, setFormData] = useState({
     leaveType: "",
     startDate: "",
     endDate: "",
     reason: "",
-    document: null,
-    documentName: "",
-    primaryApproverRole: "", // Now sending role instead of user ID
-    adminApprover: "6795dd028da3d527929978f1", // Fixed Admin Approver
+    primaryApproverRole: "",
+    adminApprover: "6795dd028da3d527929978f1",
   });
 
   useEffect(() => {
@@ -40,44 +41,56 @@ export default function LeaveApplicationForm() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    setFormData({
-      ...formData,
-      document: file,
-      documentName: file ? file.name : "",
-    });
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!userId) {
-      alert("User ID is missing. Please log in again.");
+
+    if (!authUser?._id) {
+      console.error("Error: authUser._id is missing. Check authentication.");
       return;
     }
 
-    const data = new FormData();
-    data.append("userId", userId);
-    data.append("fullName", fullName);
-    data.append("startDate", formData.startDate);
-    data.append("endDate", formData.endDate);
-    data.append("leaveType", formData.leaveType);
-    data.append("reason", formData.reason);
-    data.append("approverRole", formData.primaryApproverRole); // Sending role instead of user
-    data.append("adminApprover", formData.adminApprover);
-    if (formData.document) {
-      data.append("document", formData.document);
-    }
+    const leaveRequest = {
+      userId: authUser._id,
+      fullName: authUser.fullName,
+      leaveType: formData.leaveType,
+      startDate: formData.startDate,
+      endDate: formData.endDate,
+      reason: formData.reason,
+      primaryApprover: formData.primaryApproverRole,
+      adminApprover: "6795dd028da3d527929978f1",
+    };
 
     try {
-      await axios.post("http://localhost:5000/api/leaves/apply", data, {
-        headers: { "Content-Type": "multipart/form-data" },
+      const response = await fetch("http://localhost:5000/api/leaves/apply", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(leaveRequest),
       });
-      alert("Leave application submitted successfully!");
+
+      const data = await response.json();
+      if (!response.ok) {
+        setMessage("Failed to apply for leave.");
+        setMessageType("error");
+      } else {
+        setMessage("Leave application submitted successfully.");
+        setMessageType("success");
+        setFormData({
+          leaveType: "",
+          startDate: "",
+          endDate: "",
+          reason: "",
+          primaryApproverRole: "",
+          adminApprover: "6795dd028da3d527929978f1",
+        });
+      }
+      setTimeout(() => setMessage(null), 3000);
     } catch (error) {
-      alert(
-        "Failed to apply for leave. " + (error.response?.data?.message || "")
-      );
+      console.error("Network error submitting leave application:", error);
+      setMessage("Network error. Please try again.");
+      setMessageType("error");
+      setTimeout(() => setMessage(null), 3000);
     }
   };
 
@@ -86,7 +99,15 @@ export default function LeaveApplicationForm() {
       <div className="max-w-2xl mx-auto">
         <div className="bg-gray-800 rounded-xl shadow-xl p-8 border border-gray-700">
           <h2 className="text-2xl font-semibold mb-6">Leave Application</h2>
-
+          {message && (
+            <div
+              className={`text-center py-2 px-4 mb-4 rounded-lg text-white ${
+                messageType === "success" ? "bg-green-600" : "bg-red-600"
+              }`}
+            >
+              {message}
+            </div>
+          )}
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <label className="block text-sm font-medium mb-1">
@@ -100,8 +121,11 @@ export default function LeaveApplicationForm() {
                 required
               >
                 <option value="">Select Leave Type</option>
-                <option value="Sick Leave">Sick Leave</option>
+                <option value="Special Leave">Special Leave</option>
                 <option value="Casual Leave">Casual Leave</option>
+                <option value="Compensatory Casual Leave">
+                  Compensatory Casual Leave
+                </option>
                 <option value="Earned Leave">Earned Leave</option>
               </select>
             </div>
@@ -120,7 +144,6 @@ export default function LeaveApplicationForm() {
                   required
                 />
               </div>
-
               <div>
                 <label className="block text-sm font-medium mb-1">
                   End Date
@@ -147,28 +170,7 @@ export default function LeaveApplicationForm() {
                 required
               ></textarea>
             </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Supporting Document
-              </label>
-              <input
-                type="file"
-                onChange={handleFileChange}
-                className="hidden"
-                id="file-upload"
-              />
-              <label
-                htmlFor="file-upload"
-                className="block w-full text-center px-4 py-2 bg-gray-700 rounded-lg cursor-pointer"
-              >
-                Upload File
-              </label>
-              {formData.documentName && (
-                <p className="mt-2 text-sm">
-                  Uploaded File: {formData.documentName}
-                </p>
-              )}
-            </div>
+
             <div>
               <label className="block text-sm font-medium mb-1">
                 Select Primary Approver Role

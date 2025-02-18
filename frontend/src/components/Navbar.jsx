@@ -78,6 +78,14 @@ const Navbar = () => {
                   >
                     Leave History
                   </button>
+
+                  <button
+                    onClick={() => navigate("/earnedleave")}
+                    className="w-full p-3 text-left hover:bg-gray-700 text-sm"
+                  >
+                    Apply For Earned Leave
+                  </button>
+
                   <button
                     onClick={() => navigate("/Dashboard")}
                     className="w-full p-3 text-left hover:bg-gray-700 rounded-b-lg text-sm"

@@ -37,6 +37,10 @@ const userSchema = new mongoose.Schema(
         "Admin",
       ],
     },
+    casualLeaves: { type: Object, default: 7 }, // { "1": 1.5, "2": 1.5, "3": 0 } (month-wise)
+    specialLeaves: { type: Number, default: 8 }, // Total 8 per year
+    halfPayLeaves: { type: Number, default: 5 }, // Total 5 per year
+    earnedLeaves: { type: Number, default: 15 },
   },
   { timestamps: true }
 );

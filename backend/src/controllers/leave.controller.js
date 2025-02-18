@@ -1,19 +1,19 @@
 import Leave from "../models/leave.model.js";
 import User from "../models/user.model.js";
-import cloudinary from "cloudinary";
 
-cloudinary.v2.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-});
+const getPrimaryApproverId = async (role) => {
+  const approver = await User.findOne({ role }); // Fetch user by role
+  return approver ? approver._id : null; // Return ObjectId if found
+};
+// Helper function to calculate available CL for a user
+const getAvailableCasualLeave = (user) => {
+  const currentMonth = new Date().getMonth() + 1; // Get current month (1-12)
+  return user.casualLeaves?.[currentMonth] ?? 1.5; // Default CL is 1.5 per month
+};
 
+// Function to apply for leave
 export const applyLeave = async (req, res) => {
   try {
-    console.log("🟢 Leave Application Request Received");
-    console.log("🔹 Request Body:", req.body);
-    console.log("📂 Uploaded File:", req.file);
-
     const {
       userId,
       fullName,
@@ -21,26 +21,42 @@ export const applyLeave = async (req, res) => {
       endDate,
       leaveType,
       reason,
-      approverRole,
+      primaryApprover,
     } = req.body;
 
-    // Fetch Primary Approver ID based on selected role
-    const primaryApproverUser = await User.findOne({ role: approverRole });
-    if (!primaryApproverUser) {
+    // Fetch user details
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+    // Get Primary Approver's ObjectId
+    const primaryApproverId = await getPrimaryApproverId(primaryApprover);
+
+    if (!primaryApproverId) {
       return res
         .status(400)
-        .json({ message: "No user found for selected role." });
+        .json({ message: "Primary Approver not found for the given role" });
+    }
+    // Validate leave type availability
+    if (leaveType === "Casual Leave") {
+      const availableCL = getAvailableCasualLeave(user);
+      if (availableCL < 1)
+        return res
+          .status(400)
+          .json({ message: "Not enough Casual Leave balance" });
+    } else if (leaveType === "Special Leave" && user.specialLeaves <= 0) {
+      return res
+        .status(400)
+        .json({ message: "Not enough Special Leave balance" });
+    } else if (leaveType === "Half Pay Leave" && user.halfPayLeaves <= 0) {
+      return res
+        .status(400)
+        .json({ message: "Not enough Half Pay Leave balance" });
+    } else if (leaveType === "Earned Leave" && user.earnedLeaves < 5) {
+      return res
+        .status(400)
+        .json({ message: "Minimum 5 Earned Leaves required to apply" });
     }
 
-    const primaryApprover = primaryApproverUser._id;
-    const adminApprover = "6795dd028da3d527929978f1"; // Fixed Admin Approver
-
-    let documentUrl = null;
-    if (req.file) {
-      const result = await cloudinary.v2.uploader.upload(req.file.path);
-      documentUrl = result.secure_url;
-    }
-
+    // Save leave request
     const leave = new Leave({
       userId,
       fullName,
@@ -48,113 +64,197 @@ export const applyLeave = async (req, res) => {
       endDate,
       leaveType,
       reason,
-      documentUrl,
-      primaryApprover,
-      adminApprover,
+      primaryApprover: primaryApproverId,
+      adminApprover: "67b4afcb49a185821e2b89c5", // Default admin approver
     });
 
     await leave.save();
-    console.log("✅ Leave Application Saved:", leave);
 
-    res.status(201).json({ message: "Leave application submitted", leave });
+    console.log(
+      `✅ Leave applied successfully for ${user.fullName} (${leaveType}):`,
+      leave
+    );
+    res.status(201).json({ message: "Leave applied successfully", leave });
   } catch (error) {
-    console.error("🚨 Error Processing Leave:", error.message);
-    res
-      .status(500)
-      .json({ message: "Internal server error", error: error.message });
+    console.error("❌ Error applying leave:", error);
+    res.status(500).json({ message: "Internal Server Error" });
   }
 };
+
+// Function to approve/reject leave
+export const updateLeaveStatus = async (req, res) => {
+  try {
+    console.log("Received request to update status:", req.params.leaveId);
+    console.log("Request body:", req.body);
+
+    const { leaveId } = req.params;
+    const { status } = req.body;
+
+    console.log("hi");
+    const leave = await Leave.findById(leaveId);
+    if (!leave) return res.status(404).json({ message: "Leave not found" });
+
+    const user = await User.findById(leave.userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    if (status === "accepted") {
+      // Deduct leave based on type
+      if (leave.leaveType === "Casual Leave") {
+        const currentMonth = new Date().getMonth() + 1;
+        user.casualLeaves[currentMonth] = Math.max(
+          0,
+          getAvailableCasualLeave(user) - 1
+        );
+      } else if (leave.leaveType === "Special Leave") {
+        user.specialLeaves = Math.max(0, user.specialLeaves - 1);
+      } else if (leave.leaveType === "Half Pay Leave") {
+        user.halfPayLeaves = Math.max(0, user.halfPayLeaves - 1);
+      } else if (leave.leaveType === "Earned Leave") {
+        user.earnedLeaves = Math.max(0, user.earnedLeaves - 1);
+      }
+
+      // Save updated leave balance
+      await user.save();
+    }
+
+    leave.status = status;
+    leave.primaryApprovalDate = new Date();
+    await leave.save();
+
+    console.log(
+      `✅ Leave ${status} for ${user.fullName} (${leave.leaveType}). Updated balances:`,
+      {
+        casualLeaves: user.casualLeaves,
+        specialLeaves: user.specialLeaves,
+        halfPayLeaves: user.halfPayLeaves,
+        earnedLeaves: user.earnedLeaves,
+      }
+    );
+
+    res.json({ message: `Leave ${status} successfully`, leave });
+  } catch (error) {
+    console.error("❌ Error updating leave status:", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
+// Apply for Compensatory Casual Leave (CCL)
+export const applyCCL = async (req, res) => {
+  try {
+    const { userId, fullName, workDate, reason } = req.body;
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    user.compensatoryLeaves += 1;
+    await user.save();
+
+    const leave = new Leave({
+      userId,
+      fullName,
+      leaveType: "Compensatory Casual Leave",
+      startDate: workDate,
+      endDate: workDate,
+      reason,
+      primaryApprover: null,
+    });
+
+    await leave.save();
+    res
+      .status(201)
+      .json({ message: "Compensatory Leave applied successfully", leave });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Approve Earned Leave
+
+// Get User Leaves
 export const getUserLeaves = async (req, res) => {
   try {
     const { userId } = req.params;
-    console.log(`🔹 Fetching leaves for user: ${userId}`);
-
     const leaves = await Leave.find({ userId }).sort({ startDate: -1 });
-
-    console.log("✅ User Leaves Found:", leaves);
     res.status(200).json(leaves);
   } catch (error) {
-    console.error("🚨 Error Fetching Leaves:", error.message);
-    res
-      .status(500)
-      .json({ message: "Internal server error", error: error.message });
+    res.status(500).json({ message: error.message });
   }
 };
 
-// Fetch pending leaves for a specific primary approver
+// Get Pending Approvals
+
 export const getPendingApprovals = async (req, res) => {
   try {
     const { approverId } = req.params;
-    console.log("Fetching leaves for Primary Approver ID:", approverId);
 
+    // Fetch all pending leave applications assigned to this approver
     const pendingLeaves = await Leave.find({
       primaryApprover: approverId,
       status: "Pending",
     });
 
-    console.log("Leaves found:", pendingLeaves);
-    res.json(pendingLeaves);
-  } catch (error) {
-    console.error("Error fetching pending approvals:", error);
-    res
-      .status(500)
-      .json({ message: "Error fetching pending approvals", error });
-  }
-};
+    // If no pending leaves, return empty array
+    if (pendingLeaves.length === 0) {
+      return res.status(200).json({ pendingLeaves: [], leaveBalances: {} });
+    }
 
-// Update leave status (Accept/Reject)
-export const updateLeaveStatus = async (req, res) => {
-  try {
-    const { leaveId } = req.params;
-    const { status } = req.body;
-
-    console.log(`Updating leave ${leaveId} to status: ${status}`);
-
-    const leave = await Leave.findByIdAndUpdate(
-      leaveId,
-      { status },
-      { new: true }
+    // Fetch leave balances for each user in the pending leave list
+    const userIds = pendingLeaves.map((leave) => leave.userId);
+    const users = await User.find({ _id: { $in: userIds } }).select(
+      "_id fullName casualLeaves specialLeaves halfPayLeaves earnedLeaves"
     );
 
-    if (!leave) {
-      console.error("Leave request not found:", leaveId);
-      return res.status(404).json({ message: "Leave request not found" });
-    }
+    // Map users by ID for quick lookup
+    const userMap = users.reduce((acc, user) => {
+      acc[user._id] = user;
+      return acc;
+    }, {});
 
-    console.log("Leave updated successfully:", leave);
-    res.json({ message: "Leave status updated successfully", leave });
+    // Attach leave balances to pending leaves
+    const pendingLeavesWithBalances = pendingLeaves.map((leave) => ({
+      ...leave.toObject(),
+      leaveBalances: userMap[leave.userId] || {},
+    }));
+
+    return res.status(200).json({ pendingLeaves: pendingLeavesWithBalances });
   } catch (error) {
-    console.error("Error updating leave status:", error);
-    res.status(500).json({ message: "Error updating leave status", error });
+    console.error("Error fetching pending approvals:", error);
+    return res.status(500).json({ message: "Internal Server Error" });
   }
 };
 
+// Get All Leave Applications
 export const getAllLeaves = async (req, res) => {
   try {
-    console.log("🔹 Fetching all leave applications...");
-
     const leaves = await Leave.find()
-      .populate("userId", "fullName email") // Fetch user details
-      .populate("primaryApprover", "fullName email") // Fetch approver details
-      .sort({ startDate: -1 }); // Sort by start date (newest first)
-
-    if (!leaves || leaves.length === 0) {
-      console.log("⚠️ No leave applications found.");
-      return res.status(404).json({ message: "No leave applications found." });
-    }
-
-    // Add primaryApprover full name to each leave
-    const leavesWithApprover = leaves.map((leave) => ({
-      ...leave.toObject(),
-      primaryApproverName: leave.primaryApprover.fullName, // Add primary approver name
-    }));
-
-    console.log("✅ Fetched leave applications:", leavesWithApprover.length);
-    res.status(200).json(leavesWithApprover); // Send modified data
+      .populate("userId", "fullName email")
+      .populate("primaryApprover", "fullName email")
+      .sort({ startDate: -1 });
+    res.status(200).json(leaves);
   } catch (error) {
-    console.error("🚨 Error fetching leave applications:", error.message);
-    res
-      .status(500)
-      .json({ message: "Internal server error", error: error.message });
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Get Leave Counters for a User
+export const getLeaveCounters = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const user = await User.findById(userId);
+    console.log(userId);
+
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const counters = {
+      CL: user.casualLeaves || 0,
+      HPL: user.halfPayLeaves || 0,
+      CCL: user.compensatoryLeaves || 0,
+      SL: user.specialLeaves || 0,
+      EL: user.earnedLeaves || 0,
+      StudyLeave: user.studyLeaves || 0,
+    };
+
+    res.status(200).json(counters);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 };
